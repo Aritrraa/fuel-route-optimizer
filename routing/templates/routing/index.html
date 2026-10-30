@@ -1,0 +1,1062 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FuelRoute — Smart Highway Fuel Optimizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --primary-soft: #eff6ff;
+      --accent: #10b981;
+      --accent-soft: #ecfdf5;
+      --danger: #ef4444;
+      --danger-soft: #fef2f2;
+      --warning: #f59e0b;
+      --slate-900: #0f172a;
+      --slate-800: #1e293b;
+      --slate-700: #334155;
+      --slate-600: #475569;
+      --slate-500: #64748b;
+      --slate-400: #94a3b8;
+      --slate-200: #e2e8f0;
+      --slate-100: #f1f5f9;
+      --slate-50: #f8fafc;
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.04);
+      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.03);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-sans);
+      color: var(--slate-800);
+      background: #fff;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Sidebar Layout */
+    #sidebar {
+      width: 440px;
+      min-width: 440px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+      border-right: 1px solid var(--slate-200);
+      z-index: 1000;
+      box-shadow: 2px 0 12px rgba(0,0,0,0.03);
+    }
+
+    .brand-header {
+      padding: 18px 22px 14px;
+      border-bottom: 1px solid var(--slate-100);
+      background: #ffffff;
+    }
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, var(--primary), #3b82f6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 19px;
+      box-shadow: 0 3px 8px rgba(37,99,235,0.3);
+    }
+    .brand-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--slate-900);
+      letter-spacing: -0.02em;
+    }
+    .brand-tag {
+      font-size: 11px;
+      color: var(--slate-500);
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    /* Scrollable Controls & Results */
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 18px 22px;
+    }
+    .sidebar-content::-webkit-scrollbar {
+      width: 6px;
+    }
+    .sidebar-content::-webkit-scrollbar-thumb {
+      background: var(--slate-200);
+      border-radius: 4px;
+    }
+
+    /* Presets Chips */
+    .presets-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--slate-400);
+      margin-bottom: 8px;
+    }
+    .presets-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .preset-btn {
+      font-size: 12px;
+      font-weight: 500;
+      padding: 5px 10px;
+      border-radius: 20px;
+      background: var(--slate-100);
+      color: var(--slate-700);
+      border: 1px solid var(--slate-200);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .preset-btn:hover {
+      background: var(--primary-soft);
+      color: var(--primary);
+      border-color: #bfdbfe;
+      transform: translateY(-1px);
+    }
+
+    /* Form Fields */
+    .input-group {
+      position: relative;
+      margin-bottom: 10px;
+    }
+    .input-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--slate-700);
+      margin-bottom: 5px;
+    }
+    .input-icon-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .dot-start { background: var(--accent); }
+    .dot-finish { background: var(--slate-800); }
+
+    .route-input {
+      width: 100%;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-family: inherit;
+      color: var(--slate-800);
+      background: var(--slate-50);
+      border: 1.5px solid var(--slate-200);
+      border-radius: 8px;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+    .route-input:focus {
+      background: #fff;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+    }
+
+    .swap-row {
+      display: flex;
+      justify-content: flex-end;
+      margin: -6px 0 6px;
+    }
+    .swap-btn {
+      background: none;
+      border: none;
+      font-size: 12px;
+      color: var(--primary);
+      font-weight: 600;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .swap-btn:hover {
+      background: var(--primary-soft);
+    }
+
+    /* Settings Accordion */
+    .settings-toggle {
+      width: 100%;
+      background: none;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--slate-600);
+      cursor: pointer;
+      margin-top: 4px;
+    }
+    .settings-toggle:hover { color: var(--primary); }
+    .settings-toggle span { display: flex; align-items: center; gap: 6px; }
+    .settings-toggle .arrow { transition: transform 0.2s ease; font-size: 11px; }
+    .settings-toggle.open .arrow { transform: rotate(180deg); }
+
+    .settings-panel {
+      display: none;
+      background: var(--slate-50);
+      border: 1px solid var(--slate-200);
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+    .settings-panel.open { display: block; }
+    .setting-item {
+      margin-bottom: 12px;
+    }
+    .setting-item:last-child { margin-bottom: 0; }
+    .setting-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--slate-700);
+      margin-bottom: 4px;
+    }
+    .setting-value {
+      color: var(--primary);
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+    .setting-slider {
+      width: 100%;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+
+    /* Action Button */
+    .plan-btn {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      background: linear-gradient(135deg, var(--primary), #1d4ed8);
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(37,99,235,0.25);
+      transition: all 0.2s ease;
+    }
+    .plan-btn:hover {
+      box-shadow: 0 6px 16px rgba(37,99,235,0.35);
+      transform: translateY(-1px);
+    }
+    .plan-btn:disabled {
+      background: var(--slate-400);
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* Status & Alerts */
+    .status-box {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      display: none;
+    }
+    .status-loading {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      border: 1px solid #bfdbfe;
+    }
+    .status-error {
+      background: var(--danger-soft);
+      color: var(--danger);
+      border: 1px solid #fecaca;
+    }
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(37,99,235,0.2);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Results Dashboard */
+    #results-area {
+      display: none;
+      margin-top: 20px;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .kpi-card {
+      background: var(--slate-50);
+      border: 1px solid var(--slate-200);
+      border-radius: 10px;
+      padding: 12px;
+      transition: transform 0.15s ease;
+    }
+    .kpi-card:hover { transform: translateY(-1px); }
+    .kpi-card.highlight {
+      background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+      border-color: #bbf7d0;
+    }
+    .kpi-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--slate-500);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 4px;
+    }
+    .kpi-val {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--slate-900);
+      font-family: var(--font-mono);
+      letter-spacing: -0.02em;
+    }
+    .kpi-sub {
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 600;
+      margin-top: 3px;
+    }
+
+    /* Journey Timeline SVG */
+    .timeline-section {
+      background: #ffffff;
+      border: 1px solid var(--slate-200);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--slate-800);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .timeline-svg {
+      width: 100%;
+      height: 90px;
+      overflow: visible;
+    }
+
+    /* Actions Bar */
+    .actions-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .action-btn {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--slate-200);
+      background: #ffffff;
+      color: var(--slate-700);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    .action-btn:hover {
+      background: var(--slate-50);
+      border-color: var(--slate-300);
+      color: var(--slate-900);
+    }
+
+    /* Fuel Stops List */
+    .stops-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .stop-card {
+      border: 1px solid var(--slate-200);
+      border-radius: 10px;
+      padding: 12px 14px;
+      background: #ffffff;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .stop-card:hover, .stop-card.active {
+      border-color: var(--primary);
+      box-shadow: 0 4px 12px rgba(37,99,235,0.12);
+      transform: translateY(-1px);
+    }
+    .stop-card.active {
+      background: var(--primary-soft);
+    }
+    .stop-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .stop-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--danger);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      margin-right: 6px;
+    }
+    .stop-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--slate-900);
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .stop-price-tag {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent);
+      background: var(--accent-soft);
+      padding: 2px 7px;
+      border-radius: 12px;
+      border: 1px solid #bbf7d0;
+    }
+    .stop-meta {
+      font-size: 12px;
+      color: var(--slate-500);
+      margin-bottom: 6px;
+    }
+    .stop-details-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      background: var(--slate-50);
+      padding: 6px 10px;
+      border-radius: 6px;
+      color: var(--slate-700);
+    }
+    .stop-details-row b {
+      color: var(--slate-900);
+      font-family: var(--font-mono);
+    }
+
+    /* Map Styling */
+    #map {
+      flex: 1;
+      height: 100vh;
+      background: #f8fafc;
+    }
+
+    /* Custom Leaflet Marker Styling */
+    .custom-div-pin {
+      background: none;
+      border: none;
+    }
+    .pin-badge {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transform: translate(-50%, -100%);
+    }
+    .pin-circle {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      color: #fff;
+      font-weight: 700;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #ffffff;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+    .pin-circle:hover {
+      transform: scale(1.15);
+    }
+    .pin-circle.start { background: var(--accent); }
+    .pin-circle.finish { background: var(--slate-900); }
+    .pin-circle.stop { background: var(--danger); }
+
+    .pin-price-label {
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(4px);
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+      margin-top: 3px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--slate-900);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: var(--shadow-lg);
+      display: none;
+      z-index: 9999;
+      animation: fadeIn 0.2s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside id="sidebar">
+    <div class="brand-header">
+      <div class="brand-logo">
+        <div class="brand-icon">⛽</div>
+        <div>
+          <div class="brand-title">FuelRoute</div>
+          <div class="brand-tag">Highway Fuel Optimizer · USA</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-content">
+      <!-- Quick Presets -->
+      <div class="presets-label">Popular Routes</div>
+      <div class="presets-container">
+        <button class="preset-btn" onclick="applyPreset('Chicago, IL', 'Los Angeles, CA')">Chicago ➔ Los Angeles</button>
+        <button class="preset-btn" onclick="applyPreset('New York, NY', 'Miami, FL')">New York ➔ Miami</button>
+        <button class="preset-btn" onclick="applyPreset('Houston, TX', 'Atlanta, GA')">Houston ➔ Atlanta</button>
+        <button class="preset-btn" onclick="applyPreset('Dallas, TX', 'Atlanta, GA')">Dallas ➔ Atlanta</button>
+      </div>
+
+      <!-- Route Inputs -->
+      <div class="input-group">
+        <label class="input-label" for="start">
+          <span class="input-icon-dot dot-start"></span> Start Location
+        </label>
+        <input id="start" class="route-input" value="Chicago, IL" placeholder="City, ST or lat,lng" />
+      </div>
+
+      <div class="swap-row">
+        <button class="swap-btn" onclick="swapLocations()">⇅ Swap</button>
+      </div>
+
+      <div class="input-group">
+        <label class="input-label" for="finish">
+          <span class="input-icon-dot dot-finish"></span> Destination
+        </label>
+        <input id="finish" class="route-input" value="Los Angeles, CA" placeholder="City, ST or lat,lng" />
+      </div>
+
+      <!-- Expandable Settings -->
+      <button type="button" class="settings-toggle" id="settingsToggle" onclick="toggleSettings()">
+        <span>⚙️ Vehicle & Route Settings</span>
+        <span class="arrow">▼</span>
+      </button>
+
+      <div class="settings-panel" id="settingsPanel">
+        <div class="setting-item">
+          <div class="setting-header">
+            <span>Tank Range</span>
+            <span class="setting-value" id="valRange">500 mi</span>
+          </div>
+          <input type="range" class="setting-slider" id="inputRange" min="200" max="900" step="25" value="500" oninput="valRange.textContent = this.value + ' mi'" />
+        </div>
+        <div class="setting-item">
+          <div class="setting-header">
+            <span>Fuel Efficiency</span>
+            <span class="setting-value" id="valMpg">10 MPG</span>
+          </div>
+          <input type="range" class="setting-slider" id="inputMpg" min="6" max="35" step="1" value="10" oninput="valMpg.textContent = this.value + ' MPG'" />
+        </div>
+        <div class="setting-item">
+          <div class="setting-header">
+            <span>Corridor Search Radius</span>
+            <span class="setting-value" id="valCorridor">5 mi</span>
+          </div>
+          <input type="range" class="setting-slider" id="inputCorridor" min="2" max="20" step="1" value="5" oninput="valCorridor.textContent = this.value + ' mi'" />
+        </div>
+      </div>
+
+      <!-- Action Button -->
+      <button id="planBtn" class="plan-btn" onclick="planRoute()">
+        <span>⚡ Plan Optimal Route</span>
+      </button>
+
+      <!-- Status Alerts -->
+      <div id="statusBox" class="status-box"></div>
+
+      <!-- Results Area -->
+      <div id="results-area">
+        <!-- KPI Summary Cards -->
+        <div class="kpi-grid">
+          <div class="kpi-card highlight">
+            <div class="kpi-title">Total Fuel Cost</div>
+            <div class="kpi-val" id="kpiCost">$0.00</div>
+            <div class="kpi-sub" id="kpiSavings"></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-title">Trip Distance</div>
+            <div class="kpi-val" id="kpiDist">0 mi</div>
+            <div class="kpi-sub" id="kpiStopsCount" style="color:var(--slate-500)">0 stops</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-title">Fuel Purchased</div>
+            <div class="kpi-val" id="kpiGallons">0 gal</div>
+            <div class="kpi-sub" id="kpiAvgPrice" style="color:var(--slate-500)">$0.00/gal avg</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-title">Arrive Tank Buffer</div>
+            <div class="kpi-val" id="kpiBuffer">0 mi</div>
+            <div class="kpi-sub" id="kpiCorridorAvg" style="color:var(--slate-500)">Remaining range</div>
+          </div>
+        </div>
+
+        <!-- Interactive Journey Timeline -->
+        <div class="timeline-section" id="timelineContainer">
+          <div class="section-title">
+            <span>Fuel Tank Range Profile</span>
+            <span style="font-size:10px; font-weight:500; color:var(--slate-400)">Miles of Range</span>
+          </div>
+          <svg id="timelineSvg" class="timeline-svg" viewBox="0 0 380 90"></svg>
+        </div>
+
+        <!-- Action Export Bar -->
+        <div class="actions-bar">
+          <button class="action-btn" onclick="exportCsv()">📥 Export CSV</button>
+          <button class="action-btn" onclick="copySummary()">📋 Copy Summary</button>
+        </div>
+
+        <!-- Fuel Stops List -->
+        <div class="section-title">Optimal Fuel Stops</div>
+        <div id="stopsList" class="stops-list"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Map View -->
+  <main id="map"></main>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // Map Initialization
+    const map = L.map('map', { zoomControl: false }).setView([39.8283, -98.5795], 4);
+    L.control.zoom({ position: 'topright' }).addTo(map);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 18
+    }).addTo(map);
+
+    let routeLayer = null;
+    let stopMarkers = [];
+    let currentData = null;
+
+    function toggleSettings() {
+      const panel = document.getElementById('settingsPanel');
+      const toggle = document.getElementById('settingsToggle');
+      panel.classList.toggle('open');
+      toggle.classList.toggle('open');
+    }
+
+    function swapLocations() {
+      const s = document.getElementById('start');
+      const f = document.getElementById('finish');
+      const tmp = s.value;
+      s.value = f.value;
+      f.value = tmp;
+    }
+
+    function applyPreset(start, finish) {
+      document.getElementById('start').value = start;
+      document.getElementById('finish').value = finish;
+      planRoute();
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.style.display = 'block';
+      setTimeout(() => { t.style.display = 'none'; }, 2600);
+    }
+
+    async function planRoute() {
+      const start = document.getElementById('start').value.trim();
+      const finish = document.getElementById('finish').value.trim();
+      const range = document.getElementById('inputRange').value;
+      const mpg = document.getElementById('inputMpg').value;
+      const corridor = document.getElementById('inputCorridor').value;
+
+      const planBtn = document.getElementById('planBtn');
+      const statusBox = document.getElementById('statusBox');
+      const resultsArea = document.getElementById('results-area');
+
+      if (!start || !finish) {
+        statusBox.className = 'status-box status-error';
+        statusBox.style.display = 'block';
+        statusBox.textContent = 'Please enter both start and finish locations.';
+        return;
+      }
+
+      planBtn.disabled = true;
+      statusBox.className = 'status-box status-loading';
+      statusBox.style.display = 'flex';
+      statusBox.innerHTML = '<div class="spinner"></div><span>Finding route & calculating optimal fuel stops...</span>';
+      resultsArea.style.display = 'none';
+
+      try {
+        const params = new URLSearchParams({
+          start: start,
+          finish: finish,
+          range_miles: range,
+          mpg: mpg,
+          corridor_miles: corridor
+        });
+
+        const res = await fetch('/api/route/?' + params);
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to plan route');
+        }
+
+        currentData = data;
+        statusBox.style.display = 'none';
+        renderResults(data);
+      } catch (err) {
+        statusBox.className = 'status-box status-error';
+        statusBox.style.display = 'block';
+        statusBox.textContent = err.message;
+      } finally {
+        planBtn.disabled = false;
+      }
+    }
+
+    function renderResults(data) {
+      document.getElementById('results-area').style.display = 'block';
+
+      // KPI Metrics
+      document.getElementById('kpiCost').textContent = '$' + data.total_fuel_cost.toFixed(2);
+      document.getElementById('kpiDist').textContent = data.total_distance_miles.toLocaleString() + ' mi';
+      document.getElementById('kpiStopsCount').textContent = data.fuel_stops.length + (data.fuel_stops.length === 1 ? ' stop' : ' stops');
+      document.getElementById('kpiGallons').textContent = data.total_gallons_purchased.toFixed(1) + ' gal';
+
+      const avgPaid = data.savings ? data.savings.average_price_paid : (data.total_gallons_purchased > 0 ? data.total_fuel_cost / data.total_gallons_purchased : 0);
+      document.getElementById('kpiAvgPrice').textContent = '$' + avgPaid.toFixed(3) + '/gal paid';
+
+      if (data.savings && data.savings.savings_vs_corridor_avg > 0) {
+        document.getElementById('kpiSavings').textContent = '🎉 Saved $' + data.savings.savings_vs_corridor_avg.toFixed(2) + ' vs avg';
+      } else {
+        document.getElementById('kpiSavings').textContent = 'Optimal cost';
+      }
+
+      const finalTimeline = data.journey_timeline ? data.journey_timeline[data.journey_timeline.length - 1] : null;
+      if (finalTimeline) {
+        document.getElementById('kpiBuffer').textContent = finalTimeline.fuel_miles.toFixed(0) + ' mi';
+      } else {
+        document.getElementById('kpiBuffer').textContent = '--';
+      }
+
+      // Render Fuel Tank Journey Chart
+      renderTimelineChart(data.journey_timeline, data.total_distance_miles, data.vehicle.range_miles);
+
+      // Render Fuel Stops List
+      renderStopsList(data.fuel_stops);
+
+      // Render Map Layers
+      renderMap(data);
+    }
+
+    function renderTimelineChart(timeline, totalMiles, maxRange) {
+      const svg = document.getElementById('timelineSvg');
+      if (!timeline || timeline.length === 0) {
+        svg.innerHTML = '';
+        return;
+      }
+
+      const w = 380, h = 90, padL = 30, padR = 20, padT = 10, padB = 22;
+      const chartW = w - padL - padR;
+      const chartH = h - padT - padB;
+
+      const scaleX = (m) => padL + (m / (totalMiles || 1)) * chartW;
+      const scaleY = (f) => padT + chartH - (f / (maxRange || 500)) * chartH;
+
+      let points = [];
+      let dots = '';
+
+      timeline.forEach((pt, idx) => {
+        const x = scaleX(pt.mile);
+        const y = scaleY(pt.fuel_miles);
+        points.push(`${x},${y}`);
+
+        if (pt.event === 'stop_refuel') {
+          dots += `<circle cx="${x}" cy="${y}" r="4" fill="#10b981" stroke="#ffffff" stroke-width="1.5"><title>${pt.label}</title></circle>`;
+        } else if (pt.event === 'stop_arrival') {
+          dots += `<circle cx="${x}" cy="${y}" r="3.5" fill="#ef4444" stroke="#ffffff" stroke-width="1.5"><title>${pt.label}</title></circle>`;
+        }
+      });
+
+      const polylinePoints = points.join(' ');
+      const areaPoints = `${padL},${padT + chartH} ${polylinePoints} ${scaleX(totalMiles)},${padT + chartH}`;
+
+      svg.innerHTML = `
+        <defs>
+          <linearGradient id="tankGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#2563eb" stop-opacity="0.25"/>
+            <stop offset="100%" stop-color="#2563eb" stop-opacity="0.02"/>
+          </linearGradient>
+        </defs>
+        <!-- Grid baseline & range max -->
+        <line x1="${padL}" y1="${padT}" x2="${w - padR}" y2="${padT}" stroke="#e2e8f0" stroke-dasharray="3,3" />
+        <line x1="${padL}" y1="${padT + chartH}" x2="${w - padR}" y2="${padT + chartH}" stroke="#cbd5e1" stroke-width="1" />
+        
+        <!-- Y-Axis labels -->
+        <text x="${padL - 4}" y="${padT + 4}" font-size="9" font-family="JetBrains Mono" fill="#94a3b8" text-anchor="end">${maxRange}m</text>
+        <text x="${padL - 4}" y="${padT + chartH}" font-size="9" font-family="JetBrains Mono" fill="#94a3b8" text-anchor="end">0m</text>
+        
+        <!-- X-Axis labels -->
+        <text x="${padL}" y="${h - 6}" font-size="9" font-family="JetBrains Mono" fill="#94a3b8">0 mi</text>
+        <text x="${scaleX(totalMiles)}" y="${h - 6}" font-size="9" font-family="JetBrains Mono" fill="#94a3b8" text-anchor="end">${totalMiles.toFixed(0)} mi</text>
+        
+        <!-- Area & Line -->
+        <polygon points="${areaPoints}" fill="url(#tankGrad)" />
+        <polyline points="${polylinePoints}" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linejoin="round" />
+        ${dots}
+      `;
+    }
+
+    function renderStopsList(stops) {
+      const container = document.getElementById('stopsList');
+      if (!stops || stops.length === 0) {
+        container.innerHTML = '<div style="padding:16px;text-align:center;color:var(--slate-500);font-size:13px;background:var(--slate-50);border-radius:8px">No stops required! The route fits within your tank range.</div>';
+        return;
+      }
+
+      container.innerHTML = stops.map(s => `
+        <div class="stop-card" id="stop-card-${s.stop}" onmouseenter="highlightStop(${s.stop})" onmouseleave="unhighlightStop(${s.stop})" onclick="zoomToStop(${s.stop})">
+          <div class="stop-header">
+            <div style="display:flex;align-items:center;overflow:hidden">
+              <span class="stop-badge">${s.stop}</span>
+              <span class="stop-name" title="${esc(s.name)}">${esc(s.name)}</span>
+            </div>
+            <span class="stop-price-tag">$${s.price_per_gallon.toFixed(3)}/gal</span>
+          </div>
+          <div class="stop-meta">
+            ${esc(s.city)}, ${s.state} &middot; Mile ${s.mile_marker} (${s.miles_off_route} mi off route)
+          </div>
+          <div class="stop-details-row">
+            <span>Bought: <b>${s.gallons} gal</b></span>
+            <span>Subtotal: <b>$${s.cost.toFixed(2)}</b></span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderMap(data) {
+      if (routeLayer) map.removeLayer(routeLayer);
+      stopMarkers.forEach(m => map.removeLayer(m));
+      stopMarkers = [];
+
+      // GeoJSON Route Line
+      routeLayer = L.geoJSON(data.map, {
+        filter: f => f.geometry.type === 'LineString',
+        style: () => ({ color: '#2563eb', weight: 5, opacity: 0.85, lineJoin: 'round' })
+      }).addTo(map);
+
+      // Pins using custom HTML DivIcons
+      data.map.features.forEach(f => {
+        if (f.geometry.type !== 'Point') return;
+        const [lng, lat] = f.geometry.coordinates;
+        const kind = f.properties.kind;
+
+        let iconHtml = '';
+        if (kind === 'start') {
+          iconHtml = `<div class="pin-badge"><div class="pin-circle start">A</div></div>`;
+        } else if (kind === 'finish') {
+          iconHtml = `<div class="pin-badge"><div class="pin-circle finish">B</div></div>`;
+        } else if (kind === 'fuel_stop') {
+          const s = f.properties;
+          iconHtml = `
+            <div class="pin-badge">
+              <div class="pin-circle stop">${s.stop}</div>
+              <div class="pin-price-label">$${s.price_per_gallon.toFixed(2)}</div>
+            </div>`;
+        }
+
+        const icon = L.divIcon({
+          className: 'custom-div-pin',
+          html: iconHtml,
+          iconSize: [30, 42],
+          iconAnchor: [15, 42]
+        });
+
+        const marker = L.marker([lat, lng], { icon }).addTo(map);
+
+        if (kind === 'fuel_stop') {
+          const s = f.properties;
+          marker.bindPopup(`
+            <div style="font-family:system-ui;font-size:13px;line-height:1.4">
+              <b style="font-size:14px;color:#0f172a">Stop #${s.stop}: ${esc(s.name)}</b><br>
+              ${esc(s.address ? s.address + ', ' : '')}${esc(s.city)}, ${s.state}<br>
+              <hr style="border:0;border-top:1px solid #e2e8f0;margin:6px 0">
+              <b>Price:</b> $${s.price_per_gallon.toFixed(3)}/gal<br>
+              <b>Fuel:</b> ${s.gallons} gal = <b>$${s.cost.toFixed(2)}</b><br>
+              <b>Mile:</b> ${s.mile_marker} (${s.miles_off_route} mi off route)
+            </div>
+          `);
+          stopMarkers[s.stop] = marker;
+          marker.on('click', () => {
+            highlightStop(s.stop);
+            const el = document.getElementById(`stop-card-${s.stop}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          });
+        } else {
+          marker.bindPopup(`<b>${esc(f.properties.label)}</b>`);
+        }
+      });
+
+      if (routeLayer.getBounds().isValid()) {
+        map.fitBounds(routeLayer.getBounds(), { padding: [50, 50] });
+      }
+    }
+
+    function highlightStop(stopNum) {
+      document.querySelectorAll('.stop-card').forEach(c => c.classList.remove('active'));
+      const card = document.getElementById(`stop-card-${stopNum}`);
+      if (card) card.classList.add('active');
+
+      const marker = stopMarkers[stopNum];
+      if (marker) {
+        marker.openPopup();
+      }
+    }
+
+    function unhighlightStop(stopNum) {
+      const card = document.getElementById(`stop-card-${stopNum}`);
+      if (card) card.classList.remove('active');
+    }
+
+    function zoomToStop(stopNum) {
+      const marker = stopMarkers[stopNum];
+      if (marker) {
+        map.setView(marker.getLatLng(), 11, { animate: true });
+        marker.openPopup();
+      }
+    }
+
+    function exportCsv() {
+      if (!currentData || !currentData.fuel_stops) return;
+      const headers = ['Stop Number', 'Truckstop Name', 'Address', 'City', 'State', 'Price Per Gallon ($)', 'Gallons Purchased', 'Total Cost ($)', 'Mile Marker', 'Miles Off Route', 'Latitude', 'Longitude'];
+      const rows = currentData.fuel_stops.map(s => [
+        s.stop,
+        `"${(s.name || '').replace(/"/g, '""')}"`,
+        `"${(s.address || '').replace(/"/g, '""')}"`,
+        `"${s.city}"`,
+        `"${s.state}"`,
+        s.price_per_gallon,
+        s.gallons,
+        s.cost,
+        s.mile_marker,
+        s.miles_off_route,
+        s.lat,
+        s.lng
+      ]);
+
+      const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `fuel_itinerary_${currentData.start.replace(/[^a-z0-9]/gi, '_')}_to_${currentData.finish.replace(/[^a-z0-9]/gi, '_')}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('CSV itinerary downloaded!');
+    }
+
+    function copySummary() {
+      if (!currentData) return;
+      const text = `FuelRoute Plan:
+From: ${currentData.start}
+To: ${currentData.finish}
+Distance: ${currentData.total_distance_miles} miles
+Total Stops: ${currentData.fuel_stops.length}
+Total Gallons: ${currentData.total_gallons_purchased} gal
+Total Cost: $${currentData.total_fuel_cost.toFixed(2)}`;
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('Summary copied to clipboard!');
+      });
+    }
+
+    function esc(s) {
+      return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+  </script>
+</body>
+</html>

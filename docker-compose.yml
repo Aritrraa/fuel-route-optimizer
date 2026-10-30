@@ -1,0 +1,17 @@
+services:
+  web:
+    build: .
+    container_name: fuelroute_app
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - ALLOWED_HOSTS=*
+      - OSRM_URL=https://router.project-osrm.org
+      - ROUTING_TIMEOUT=20
+      - VEHICLE_RANGE_MILES=500
+      - VEHICLE_MPG=10
+      - CORRIDOR_MILES=5
+    volumes:
+      - .:/app
+    restart: unless-stopped

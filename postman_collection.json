@@ -1,0 +1,147 @@
+{
+  "info": {
+    "name": "Fuel Route API — Spotter Assessment",
+    "_postman_id": "c1f7a28e-8a59-4b61-b4d1-f8a49c25e830",
+    "description": "Postman Collection for demonstrating the Fuel Route Optimizer API for the Spotter Backend Django Engineer Assessment.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. GET Route (Chicago to Los Angeles)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/api/route/?start=Chicago, IL&finish=Los Angeles, CA",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "route", ""],
+          "query": [
+            { "key": "start", "value": "Chicago, IL" },
+            { "key": "finish", "value": "Los Angeles, CA" }
+          ]
+        },
+        "description": "Standard cross-country query using US city names. Resolves coordinates offline and returns optimal fuel stops and GeoJSON map."
+      }
+    },
+    {
+      "name": "2. POST Route (New York to Miami)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"start\": \"New York, NY\",\n  \"finish\": \"Miami, FL\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/api/route/",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "route", ""]
+        },
+        "description": "POST endpoint with JSON request body."
+      }
+    },
+    {
+      "name": "3. GET Route by Coordinates (lat,lng)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/api/route/?start=41.8781,-87.6298&finish=34.0522,-118.2437",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "route", ""],
+          "query": [
+            { "key": "start", "value": "41.8781,-87.6298" },
+            { "key": "finish", "value": "34.0522,-118.2437" }
+          ]
+        },
+        "description": "Pass direct latitude and longitude coordinates."
+      }
+    },
+    {
+      "name": "4. GET Custom Vehicle (Range & MPG)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/api/route/?start=Houston, TX&finish=Atlanta, GA&range_miles=400&mpg=12&corridor_miles=8",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "route", ""],
+          "query": [
+            { "key": "start", "value": "Houston, TX" },
+            { "key": "finish", "value": "Atlanta, GA" },
+            { "key": "range_miles", "value": "400" },
+            { "key": "mpg", "value": "12" },
+            { "key": "corridor_miles", "value": "8" }
+          ]
+        },
+        "description": "Demonstrates custom vehicle parameters (400 mi tank, 12 MPG, 8 mi corridor)."
+      }
+    },
+    {
+      "name": "5. GET Short Trip (No Stops Needed)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/api/route/?start=Chicago, IL&finish=St. Louis, MO",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "route", ""],
+          "query": [
+            { "key": "start", "value": "Chicago, IL" },
+            { "key": "finish", "value": "St. Louis, MO" }
+          ]
+        },
+        "description": "Short route (< 500 miles). Starts with full tank, reaches destination with zero stops required."
+      }
+    },
+    {
+      "name": "6. Validation Error: Missing Destination",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/api/route/?start=Chicago, IL",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "route", ""],
+          "query": [
+            { "key": "start", "value": "Chicago, IL" }
+          ]
+        },
+        "description": "Expects 400 Bad Request when parameters are missing."
+      }
+    },
+    {
+      "name": "7. Validation Error: Non-Continental Location",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/api/route/?start=Honolulu, HI&finish=Chicago, IL",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "route", ""],
+          "query": [
+            { "key": "start", "value": "Honolulu, HI" },
+            { "key": "finish", "value": "Chicago, IL" }
+          ]
+        },
+        "description": "Expects 400 Bad Request when location is outside continental US."
+      }
+    }
+  ]
+}

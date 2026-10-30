@@ -1,0 +1,174 @@
+openapi: 3.0.3
+info:
+  title: Fuel Route Optimizer API
+  version: 2.0.0
+  description: >
+    Production-ready Django API that calculates highway driving routes across the continental US,
+    identifies candidate fuel stations within a highway corridor, and determines the mathematically
+    optimal (cheapest) refueling stops adhering to vehicle range and fuel efficiency constraints.
+paths:
+  /api/route/:
+    get:
+      summary: Plan optimal route and fuel stops (Query Parameters)
+      parameters:
+        - name: start
+          in: query
+          required: true
+          description: "Starting location in 'City, ST' or 'lat,lng' format"
+          schema:
+            type: string
+            example: "Chicago, IL"
+        - name: finish
+          in: query
+          required: true
+          description: "Destination location in 'City, ST' or 'lat,lng' format"
+          schema:
+            type: string
+            example: "Los Angeles, CA"
+        - name: range_miles
+          in: query
+          required: false
+          description: "Maximum vehicle fuel range in miles (default 500)"
+          schema:
+            type: number
+            default: 500
+        - name: mpg
+          in: query
+          required: false
+          description: "Vehicle fuel efficiency in miles per gallon (default 10)"
+          schema:
+            type: number
+            default: 10
+        - name: corridor_miles
+          in: query
+          required: false
+          description: "Maximum search radius in miles off the highway route (default 5)"
+          schema:
+            type: number
+            default: 5
+      responses:
+        '200':
+          description: Route planned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoutePlanResponse'
+        '400':
+          description: Invalid input parameters or location not found
+        '422':
+          description: Infeasible route (no fuel station in range)
+        '502':
+          description: External routing service failure
+    post:
+      summary: Plan optimal route and fuel stops (JSON Body)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - start
+                - finish
+              properties:
+                start:
+                  type: string
+                  example: "New York, NY"
+                finish:
+                  type: string
+                  example: "Miami, FL"
+                range_miles:
+                  type: number
+                  example: 500
+                mpg:
+                  type: number
+                  example: 10
+                corridor_miles:
+                  type: number
+                  example: 5
+      responses:
+        '200':
+          description: Route planned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoutePlanResponse'
+components:
+  schemas:
+    RoutePlanResponse:
+      type: object
+      properties:
+        start:
+          type: string
+        finish:
+          type: string
+        total_distance_miles:
+          type: number
+        vehicle:
+          type: object
+          properties:
+            range_miles:
+              type: number
+            mpg:
+              type: number
+            corridor_miles:
+              type: number
+            assumption:
+              type: string
+        fuel_stops:
+          type: array
+          items:
+            $ref: '#/components/schemas/FuelStop'
+        total_gallons_purchased:
+          type: number
+        total_fuel_cost:
+          type: number
+        route_cached:
+          type: boolean
+        savings:
+          type: object
+          properties:
+            average_price_paid:
+              type: number
+            corridor_avg_price:
+              type: number
+            savings_vs_corridor_avg:
+              type: number
+        journey_timeline:
+          type: array
+          items:
+            type: object
+        map:
+          type: object
+          description: GeoJSON FeatureCollection
+    FuelStop:
+      type: object
+      properties:
+        stop:
+          type: integer
+        name:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        price_per_gallon:
+          type: number
+        gallons:
+          type: number
+        cost:
+          type: number
+        mile_marker:
+          type: number
+        miles_off_route:
+          type: number
+        range_before_miles:
+          type: number
+        range_after_miles:
+          type: number
+        lat:
+          type: number
+        lng:
+          type: number
